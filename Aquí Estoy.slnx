@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="../AquiEstoy.API/AquiEstoy.API.csproj" />
+  <Project Path="AquiEstoy.API/AquiEstoy.API.csproj" />
   <Project Path="AquiEstoy.Application/AquiEstoy.Application.csproj" />
   <Project Path="AquiEstoy.Domain/AquiEstoy.Domain.csproj" />
   <Project Path="AquiEstoy.Infrastructure/AquiEstoy.Infrastructure.csproj" />
