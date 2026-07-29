@@ -1,49 +1,119 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - AquiEstoy.Web</title>
+    <title>@ViewData["Title"] - Aquí Estoy</title>
+
+    <!-- Bootstrap & Fuentes -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/AquiEstoy.Web.styles.css" asp-append-version="true" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #f3f5f6;
+            --bg-sidebar: #f8faf9;
+            --mint-primary: #d8f3e5;
+            --mint-text: #1b4d3e;
+            --text-dark: #2d3748;
+            --text-muted: #718096;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Estructura Principal */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Menú Lateral (Sidebar) */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .sidebar .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 2.5rem;
+            padding-left: 0.5rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-menu a:hover {
+            color: var(--text-dark);
+            background-color: #edf2f7;
+        }
+
+        .sidebar-menu a.active {
+            background-color: var(--mint-primary);
+            color: var(--mint-text);
+        }
+
+        /* Área de Contenido Principal */
+        .main-content {
+            flex: 1;
+            padding: 2rem 2.5rem;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">AquiEstoy.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+    <div class="app-container">
+        <!-- Menú Lateral Izquierdo -->
+        <aside class="sidebar">
+            <div class="brand">Aquí Estoy</div>
+            <ul class="sidebar-menu">
+                <li><a href="@Url.Action("Index", "Home")" class="active">Dashboard</a></li>
+                <li><a href="#">Casos</a></li>
+                <li><a href="#">Alertas</a></li>
+                <li><a href="#">Chat seguro</a></li>
+                <li><a href="#">Reportes</a></li>
+                <li><a href="#">Auditoría</a></li>
+                <li><a href="#">Usuarios</a></li>
+            </ul>
+        </aside>
+
+        <!-- Área Derecha Dinámica -->
+        <main class="main-content">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - AquiEstoy.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
