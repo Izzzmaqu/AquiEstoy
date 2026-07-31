@@ -98,11 +98,6 @@ Aqui-Estoy/
 |-- AquiEstou.Domain/
 |-- AquiEstou.Infrastructure/
 |-- AquiEstou.Web/
-|-- database/
-|   |-- diagrams/
-|   |-- scripts/
-|-- docs/
-|-- README.md
 ```
 
 ## Requisitos previos
