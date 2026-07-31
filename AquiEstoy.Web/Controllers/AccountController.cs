@@ -19,8 +19,7 @@ namespace AquiEstoy.Web.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // TODO: Aquí conectarás con tu Base de Datos / Servicio
-            // Por ahora, lógica simulada para pruebas rápidas del MVP:
+            
 
             string? role = null;
 
@@ -35,7 +34,7 @@ namespace AquiEstoy.Web.Controllers
 
             if (role != null)
             {
-                // Crear claims (datos de identidad)
+                // datos de identidad
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, model.Email),
@@ -44,7 +43,7 @@ namespace AquiEstoy.Web.Controllers
 
                 var claimsIdentity = new ClaimsIdentity(claims, "CookieAuth");
 
-                // Iniciar sesión (grabar cookie)
+                // Iniciar sesión 
                 await HttpContext.SignInAsync("CookieAuth", new ClaimsPrincipal(claimsIdentity));
 
                 // REDIRECCIÓN SEGÚN EL ROL

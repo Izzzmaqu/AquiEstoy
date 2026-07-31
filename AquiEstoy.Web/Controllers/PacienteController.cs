@@ -11,10 +11,10 @@ namespace AquiEstoy.Web.Controllers
             return View();
         }
 
-        // AGREGAR ESTA ACCIÓN
+       
         public IActionResult Chat()
         {
-            return View(); // Esto buscará la vista Views/Paciente/Chat.cshtml
+            return View(); // Esto buscará la vista Chat.cshtml
         }
     }
 }

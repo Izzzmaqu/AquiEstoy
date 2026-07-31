@@ -6,7 +6,7 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddSignalR();
 
-//  Agregar servicio de Autenticación por Cookies
+
 builder.Services.AddAuthentication("CookieAuth")
     .AddCookie("CookieAuth", config =>
     {
@@ -33,7 +33,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Establecer el Login como la pantalla de inicio por defecto
+// Establecer el Login como la pantalla de inicio 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
