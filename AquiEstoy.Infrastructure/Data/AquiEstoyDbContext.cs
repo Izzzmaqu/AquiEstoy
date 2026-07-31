@@ -49,6 +49,13 @@ namespace AquiEstoy.Infrastructure.Data
                 e.ToTable("EstadosCaso");
                 e.HasKey(x => x.Id);
                 e.Property(x => x.Nombre).IsRequired().HasMaxLength(30);
+
+                e.HasData(
+                    new EstadoCaso { Id = 1, Nombre = "Abierto" },
+                    new EstadoCaso { Id = 2, Nombre = "En seguimiento" },
+                    new EstadoCaso { Id = 3, Nombre = "Derivado" },
+                    new EstadoCaso { Id = 4, Nombre = "Cerrado" }
+                );
             });
 
             modelBuilder.Entity<Provincia>(e =>

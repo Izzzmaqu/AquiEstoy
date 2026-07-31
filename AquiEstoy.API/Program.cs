@@ -1,5 +1,4 @@
-using AquiEstoy.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using AquiEstoy.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,8 +9,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<AquiEstoyDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 

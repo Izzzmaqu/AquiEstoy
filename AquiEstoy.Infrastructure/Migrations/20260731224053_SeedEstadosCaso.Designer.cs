@@ -4,6 +4,7 @@ using AquiEstoy.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquiEstoy.Infrastructure.Migrations
 {
     [DbContext(typeof(AquiEstoyDbContext))]
-    partial class AquiEstoyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260731224053_SeedEstadosCaso")]
+    partial class SeedEstadosCaso
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
