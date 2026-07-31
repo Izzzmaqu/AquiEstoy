@@ -1,0 +1,73 @@
+﻿@{
+    Layout = "_LayoutPaciente";
+    ViewData["Title"] = "Chat Seguro";
+}
+
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h2 class="fw-bold text-dark">Chat Seguro y Confidencial</h2>
+        <p class="text-muted small">Estás conectado con un profesional de la salud mental.</p>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-4" id="chatMessages" style="height: 380px; overflow-y: auto; background-color: #fafafa;">
+            <div class="text-center text-muted small my-2">-- Inicio del chat seguro --</div>
+        </div>
+        <div class="card-footer bg-white p-3 border-top-0">
+            <div class="input-group">
+                <input type="text" id="messageInput" class="form-control rounded-pill px-3" placeholder="Escribe tu mensaje aquí..." />
+                <button class="btn text-white rounded-pill px-4 ms-2" style="background-color: #2d6a4f;" id="sendButton">Enviar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Cliente JS de SignalR via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        const casoId = "CS-1042"; // ID estático para pruebas del MVP
+        const userName = "Paciente";
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .build();
+
+        // Recibir mensaje enviado
+        connection.on("ReceiveMessage", function (user, message, time) {
+            const isMe = user === userName;
+            const align = isMe ? "text-end" : "text-start";
+            const bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
+
+            const msgHtml = `
+                <div class="${align} mb-3">
+                    <div class="d-inline-block p-3 rounded-4 ${bgClass}" style="max-width: 75%;">
+                        <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${user} • ${time}</strong>
+                        <div>${message}</div>
+                    </div>
+                </div>`;
+
+            document.getElementById("chatMessages").innerHTML += msgHtml;
+            document.getElementById("chatMessages").scrollTop = document.getElementById("chatMessages").scrollHeight;
+        });
+
+        // Iniciar conexión y unirse al caso
+        connection.start().then(function () {
+            connection.invoke("JoinCaseGroup", casoId);
+        }).catch(err => console.error(err.toString()));
+
+        // Enviar mensaje al presionar el botón o la tecla Enter
+        function sendMessage() {
+            const message = document.getElementById("messageInput").value.trim();
+            if (message !== "") {
+                connection.invoke("SendMessage", userName, message, casoId);
+                document.getElementById("messageInput").value = "";
+            }
+        }
+
+        document.getElementById("sendButton").addEventListener("click", sendMessage);
+        document.getElementById("messageInput").addEventListener("keypress", function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+}

@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Aquí Estoy</title>
+
+    <!-- Bootstrap & Fuentes -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #f3f5f6;
+            --bg-sidebar: #f8faf9;
+            --mint-primary: #d8f3e5;
+            --mint-text: #1b4d3e;
+            --text-dark: #2d3748;
+            --text-muted: #718096;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Estructura Principal */
+        .app-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Menú Lateral Izquierdo */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+
+            .sidebar .brand {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #1a202c;
+                margin-bottom: 2.5rem;
+                padding-left: 0.5rem;
+                text-decoration: none;
+                display: block;
+            }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+            .sidebar-menu a {
+                display: block;
+                padding: 0.75rem 1rem;
+                color: var(--text-muted);
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 0.95rem;
+                border-radius: 12px;
+                transition: all 0.2s ease;
+            }
+
+                .sidebar-menu a:hover {
+                    color: var(--text-dark);
+                    background-color: #edf2f7;
+                }
+
+                .sidebar-menu a.active {
+                    background-color: var(--mint-primary);
+                    color: var(--mint-text);
+                }
+
+        
+        .main-content {
+            flex: 1;
+            padding: 2rem 2.5rem;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+       
+        <aside class="sidebar">
+            <!-- ENLACE AL DASHBOARD -->
+            <a asp-controller="Paciente" asp-action="PacienteDashboard" class="brand">Aquí Estoy</a>
+
+            <ul class="sidebar-menu">
+                <!--  BOTÓN DASHBOARD  -->
+                <li>
+                    <a asp-controller="Paciente" asp-action="PacienteDashboard"
+                       class="@(ViewContext.RouteData.Values["action"]?.ToString() == "PacienteDashboard" ? "active" : "")">
+                        Dashboard
+                    </a>
+                </li>
+
+                <!--  CHAT SEGURO -->
+                <li>
+                    <a asp-controller="Paciente" asp-action="Chat"
+                       class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Chat" ? "active" : "")">
+                        Chat seguro
+                    </a>
+                </li>
+
+                <!-- LÍNEAS DE AYUDA -->
+                <li>
+                    <a asp-controller="Paciente" asp-action="LineasAyuda"
+                       class="@(ViewContext.RouteData.Values["action"]?.ToString() == "LineasAyuda" ? "active" : "")">
+                        Líneas de ayuda
+                    </a>
+                </li>
+
+                <!-- REGISTRO / MI PERFIL -->
+                <li>
+                    <a asp-controller="Paciente" asp-action="Perfil"
+                       class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Perfil" ? "active" : "")">
+                        Registro / Mi Perfil
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Área Derecha Dinámica -->
+        <main class="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

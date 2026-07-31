@@ -94,14 +94,13 @@
     <div class="app-container">
         <!-- Menú Lateral Izquierdo -->
         <aside class="sidebar">
-            <div class="brand">Aquí Estoy</div>
+            <a asp-controller="Home" asp-action="Index" class="brand">Aquí Estoy</a>
             <ul class="sidebar-menu">
                 <li><a href="@Url.Action("Index", "Home")" class="active">Dashboard</a></li>
                 <li><a href="#">Casos</a></li>
-                <li><a href="#">Alertas</a></li>
-                <li><a href="#">Chat seguro</a></li>
-                <li><a href="#">Reportes</a></li>
-                <li><a href="#">Auditoría</a></li>
+                <a asp-controller="Home" asp-action="ChatSeguro" class="nav-link text-secondary">
+                    Chat seguro
+                </a>
                 <li><a href="#">Usuarios</a></li>
             </ul>
         </aside>
