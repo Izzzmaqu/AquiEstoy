@@ -1,0 +1,146 @@
+﻿@model IEnumerable<AquiEstoy.Domain.Entities.Usuario>
+@{
+    ViewData["Title"] = "Usuarios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">Gestión de Pacientes</h3>
+        <p class="text-muted mb-0">Registra usuarios para darles credenciales y habilitar su chat seguro.</p>
+    </div>
+    <button class="btn btn-success px-4 rounded-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalNuevoPaciente">
+        + Registrar Nuevo Paciente
+    </button>
+</div>
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" role="alert">
+        @TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Mensaje de error general si falla ModelState en la página principal -->
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
+        <strong>Se encontraron errores en el formulario:</strong>
+        <div asp-validation-summary="All" class="mb-0 mt-1"></div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Tabla de Usuarios -->
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cédula</th>
+                        <th>Nombre Completo</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                        <th>Fecha Registro</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No hay pacientes registrados aún.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@user.Identificacion</td>
+                                <td>@user.Nombre @user.Apellidos</td>
+                                <td>@user.Email</td>
+                                <td>@(user.Telefono ?? "N/A")</td>
+                                <td>@user.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <a asp-controller="Chat" asp-action="Index" asp-route-pacienteId="@user.Id" class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                                        Ir al Chat
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Registrar -->
+<div class="modal fade" id="modalNuevoPaciente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Registrar Paciente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-controller="Usuarios" asp-action="Registrar" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+
+                    <!-- Resumen de validaciones dentro del modal -->
+                    <div asp-validation-summary="All" class="alert alert-danger rounded-3 mb-3" role="alert"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Cédula / Identificación</label>
+                            <input type="text" name="Identificacion" class="form-control rounded-3" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombre</label>
+                            <input type="text" name="Nombre" class="form-control rounded-3" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Apellidos</label>
+                            <input type="text" name="Apellidos" class="form-control rounded-3" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <input type="tel" name="Telefono" class="form-control rounded-3" />
+                        </div>
+
+                        <div class="col-12"><hr class="my-2 text-muted" /></div>
+                        <h6 class="fw-bold text-secondary mb-1">Credenciales de Acceso</h6>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Correo Electrónico</label>
+                            <input type="email" name="Email" class="form-control rounded-3" placeholder="paciente@correo.com" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contraseña Temporal</label>
+                            <input type="password" name="Password" class="form-control rounded-3" placeholder="Mínimo 6 caracteres" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4">Guardar y Habilitar Chat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Reabre el modal automáticamente si hubo un error de validación -->
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var modal = new bootstrap.Modal(document.getElementById('modalNuevoPaciente'));
+                modal.show();
+            });
+        </script>
+    }
+}

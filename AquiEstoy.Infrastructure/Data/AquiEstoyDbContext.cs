@@ -1,18 +1,17 @@
-﻿using AquiEstoy.Domain.Entities;
+﻿using AquiEstoy.Application.Interfaces;
+using AquiEstoy.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic;
-using System.Reflection.Emit;
 
 namespace AquiEstoy.Infrastructure.Data
 {
-    public class AquiEstoyDbContext : DbContext
+    public class AquiEstoyDbContext : DbContext, IAquiEstoyDbContext
     {
         public AquiEstoyDbContext(DbContextOptions<AquiEstoyDbContext> options)
             : base(options)
         {
         }
 
-        // Catalogos
+        // Catálogos
         public DbSet<EstadoCaso> EstadosCaso => Set<EstadoCaso>();
         public DbSet<Provincia> Provincias => Set<Provincia>();
         public DbSet<Canton> Cantones => Set<Canton>();
@@ -38,8 +37,16 @@ namespace AquiEstoy.Infrastructure.Data
         public DbSet<ReporteEstadistico> ReportesEstadisticos => Set<ReporteEstadistico>();
         public DbSet<SesionChat> SesionesChat => Set<SesionChat>();
 
+        // Método implementado de IAquiEstoyDbContext
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             // ============================================================
             // CATALOGOS
             // ============================================================
@@ -264,16 +271,12 @@ namespace AquiEstoy.Infrastructure.Data
                 e.Property(x => x.Accion).IsRequired().HasMaxLength(50);
                 e.Property(x => x.FechaAccion).IsRequired().HasDefaultValueSql("GETUTCDATE()");
                 e.Property(x => x.DetalleJson).HasColumnType("nvarchar(max)");
-                // EntidadId es intencionalmente polimorfico: sin FK.
-                // El log de auditoria debe sobrevivir aunque se borre la entidad auditada.
 
                 e.HasOne(x => x.Usuario)
                     .WithMany(u => u.RegistrosAuditoria)
                     .HasForeignKey(x => x.UsuarioId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
-
-            modelBuilder.Entity<CategoriaFactor>();
 
             modelBuilder.Entity<FactorRiesgo>(e =>
             {

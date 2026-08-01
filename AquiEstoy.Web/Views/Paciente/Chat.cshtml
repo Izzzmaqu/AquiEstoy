@@ -1,6 +1,11 @@
-﻿@{
+﻿@model IEnumerable<AquiEstoy.Domain.Entities.Mensaje>
+
+@{
     Layout = "_LayoutPaciente";
     ViewData["Title"] = "Chat Seguro";
+
+    var conversacionId = ViewBag.ConversacionId ?? 1;
+    var pacienteUserId = 1; // ID asignado al Paciente en la DB
 }
 
 <div class="container-fluid p-0">
@@ -10,12 +15,35 @@
     </div>
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <!-- ÁREA DE MENSAJES (HISTORIAL DE BASE DE DATOS + TIEMPO REAL) -->
         <div class="card-body p-4" id="chatMessages" style="height: 380px; overflow-y: auto; background-color: #fafafa;">
             <div class="text-center text-muted small my-2">-- Inicio del chat seguro --</div>
+
+            @if (Model != null && Model.Any())
+            {
+                @foreach (var msg in Model)
+                {
+                    // Evalúa si el mensaje fue enviado por el Paciente actual
+                    var isMe = msg.RemitenteId == pacienteUserId;
+                    var align = isMe ? "text-end" : "text-start";
+                    var bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
+
+                    <div class="@align mb-3">
+                        <div class="d-inline-block p-3 rounded-4 @bgClass" style="max-width: 75%;">
+                            <strong class="d-block small @(isMe ? "text-white-50" : "text-muted")">
+                                @(msg.Remitente?.Nombre ?? (isMe ? "Tú" : "Profesional")) • @msg.FechaEnvio.ToLocalTime().ToString("HH:mm")
+                            </strong>
+                            <div>@msg.Contenido</div>
+                        </div>
+                    </div>
+                }
+            }
         </div>
+
+        <!-- BARRA DE ENVÍO -->
         <div class="card-footer bg-white p-3 border-top-0">
             <div class="input-group">
-                <input type="text" id="messageInput" class="form-control rounded-pill px-3" placeholder="Escribe tu mensaje aquí..." />
+                <input type="text" id="messageInput" class="form-control rounded-pill px-3" placeholder="Escribe tu mensaje aquí..." autocomplete="off" />
                 <button class="btn text-white rounded-pill px-4 ms-2" style="background-color: #2d6a4f;" id="sendButton">Enviar</button>
             </div>
         </div>
@@ -23,51 +51,74 @@
 </div>
 
 @section Scripts {
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
-        const casoId = "CS-1042"; 
+        const casoId = "@conversacionId";
+        const userId = "@pacienteUserId";
         const userName = "Paciente";
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/chatHub")
+            .withAutomaticReconnect()
             .build();
 
-        // Recibir mensaje enviado
+        // 1. Recibir mensajes en tiempo real vía SignalR
         connection.on("ReceiveMessage", function (user, message, time) {
-            const isMe = user === userName;
+            const isMe = user === userName || user === userId;
             const align = isMe ? "text-end" : "text-start";
-            const bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
+            var bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
 
             const msgHtml = `
                 <div class="${align} mb-3">
                     <div class="d-inline-block p-3 rounded-4 ${bgClass}" style="max-width: 75%;">
-                        <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${user} • ${time}</strong>
-                        <div>${message}</div>
+                        <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${isMe ? 'Tú' : 'Profesional'} • ${time}</strong>
+                        <div>${escapeHtml(message)}</div>
                     </div>
                 </div>`;
 
-            document.getElementById("chatMessages").innerHTML += msgHtml;
-            document.getElementById("chatMessages").scrollTop = document.getElementById("chatMessages").scrollHeight;
+            const chatMessages = document.getElementById("chatMessages");
+            if (chatMessages) {
+                chatMessages.innerHTML += msgHtml;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         });
 
-        // Iniciar conexión y unirse al caso
+        // 2. Iniciar conexión y unirse al grupo de la conversación
         connection.start().then(function () {
-            connection.invoke("JoinCaseGroup", casoId);
-        }).catch(err => console.error(err.toString()));
+            return connection.invoke("JoinCaseGroup", casoId);
+        }).catch(err => console.error("Error SignalR:", err.toString()));
 
-        // Enviar mensaje al presionar el botón o la tecla Enter
+        // 3. Función para enviar mensaje
         function sendMessage() {
-            const message = document.getElementById("messageInput").value.trim();
+            const input = document.getElementById("messageInput");
+            const message = input.value.trim();
+
             if (message !== "") {
-                connection.invoke("SendMessage", userName, message, casoId);
-                document.getElementById("messageInput").value = "";
+                connection.invoke("SendMessage", userId, message, casoId)
+                    .then(() => {
+                        input.value = "";
+                    })
+                    .catch(err => console.error("Error al enviar:", err.toString()));
             }
         }
 
         document.getElementById("sendButton").addEventListener("click", sendMessage);
         document.getElementById("messageInput").addEventListener("keypress", function (e) {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter') {
+                sendMessage();
+                e.preventDefault();
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const chatMessages = document.getElementById("chatMessages");
+            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
         });
     </script>
 }
