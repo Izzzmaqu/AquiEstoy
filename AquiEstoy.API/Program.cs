@@ -1,3 +1,4 @@
+using AquiEstoy.API.Hubs;
 using AquiEstoy.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,26 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddSignalR();
+
+// El cliente MVC vive en otro origen, asi que SignalR necesita CORS explicito.
+// AllowAnyOrigin es incompatible con AllowCredentials, y SignalR requiere credenciales:
+// por eso los origenes se listan uno a uno desde configuracion.
+const string CorsPolicyWeb = "PermitirClienteWeb";
+
+var origenesWeb = builder.Configuration
+    .GetSection("Cors:OrigenesPermitidos")
+    .Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyWeb, policy =>
+        policy.WithOrigins(origenesWeb)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
+});
 
 var app = builder.Build();
 
@@ -38,8 +59,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors(CorsPolicyWeb);
+
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
