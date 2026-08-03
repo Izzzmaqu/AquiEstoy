@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace AquiEstoy.Domain.Enums;
 
-namespace AquiEstoy.Domain.Enums
+public enum NivelRiesgo
 {
-    internal class NivelRiesgo
-    {
-    }
+    Bajo = 1,
+    Medio = 2,
+    Alto = 3,
+    Critico = 4
 }

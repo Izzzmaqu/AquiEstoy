@@ -1,4 +1,6 @@
 using AquiEstoy.Infrastructure;
+using AquiEstoy.Application.Interfaces;
+using AquiEstoy.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,10 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<AlertaRiesgoService>();
+builder.Services.AddSingleton<IAlertaRiesgoRepository>(); 
 
 var app = builder.Build();
 
