@@ -1,16 +1,108 @@
-﻿@{
+@model AquiEstoy.Web.Models.Api.DashboardResumen
+@inject IConfiguration Configuration
+
+@{
     ViewData["Title"] = "Panel Principal";
+    var hubUrl = $"{Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/')}/hubs/chat";
 }
 
 <div class="container-fluid p-0">
-    
+
     <h1 class="fw-bold fs-2 text-dark mb-2">Panel general de acompañamiento y seguimiento</h1>
     <p class="text-secondary fs-6 mb-4">
-        Vista principal alineada con la base de datos actual: usuarios, casos, severidad, alertas, conversaciones, reportes y auditoría.
+        Resumen de usuarios y casos registrados en la plataforma.
     </p>
 
-    
-    <div class="p-5 text-center bg-white rounded-4 border border-dashed mt-4">
-        <p class="text-muted m-0">El contenido de los módulos se integrará progresivamente en este espacio.</p>
+    @if (ViewBag.ErrorResumen != null)
+    {
+        <div class="alert alert-warning rounded-3">@ViewBag.ErrorResumen</div>
+    }
+
+    <!-- Aviso en vivo de mensajes nuevos (mismo ChatHub, sin mecanismo aparte) -->
+    <div id="avisoMensaje" class="alert alert-info rounded-3 d-none" role="alert"></div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                <div class="text-muted small text-uppercase fw-semibold">Pacientes</div>
+                <div class="fs-2 fw-bold text-dark" id="totalPacientes">@Model.TotalPacientes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                <div class="text-muted small text-uppercase fw-semibold">Casos totales</div>
+                <div class="fs-2 fw-bold text-dark" id="totalCasos">@Model.TotalCasos</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                <div class="text-muted small text-uppercase fw-semibold">Abiertos</div>
+                <div class="fs-2 fw-bold text-success">@Model.CasosAbiertos</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                <div class="text-muted small text-uppercase fw-semibold">Cerrados</div>
+                <div class="fs-2 fw-bold text-secondary">@Model.CasosCerrados</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <h6 class="fw-bold mb-3">Casos por nivel de severidad</h6>
+
+            @if (!Model.CasosPorSeveridad.Any())
+            {
+                <p class="text-muted small mb-0">Todavía no hay casos registrados.</p>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach (var s in Model.CasosPorSeveridad)
+                    {
+                        <div class="px-3 py-2 rounded-3 text-white" style="background-color:@(s.Color ?? "#6c757d")">
+                            <span class="fw-semibold">@s.Nombre</span>
+                            <span class="ms-2 fs-5 fw-bold">@s.Cantidad</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a asp-controller="Casos" asp-action="Index" class="btn btn-outline-dark rounded-3 px-4">Ver todos los casos</a>
+        <a asp-controller="Usuarios" asp-action="Index" class="btn btn-outline-dark rounded-3 px-4">Gestionar pacientes</a>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        // El dashboard reutiliza el ChatHub para avisar de mensajes nuevos.
+        const dashboardConnection = new signalR.HubConnectionBuilder()
+            .withUrl("@hubUrl")
+            .withAutomaticReconnect()
+            .build();
+
+        window.chatConnection = dashboardConnection;
+
+        dashboardConnection.on("ReceiveMessage", function (user, userName, message, time) {
+            const aviso = document.getElementById("avisoMensaje");
+            if (!aviso) return;
+
+            const cuerpo = document.createElement('div');
+            cuerpo.innerText = message;
+
+            const autor = document.createElement('span');
+            autor.innerText = userName ?? '';
+
+            aviso.classList.remove("d-none");
+            aviso.innerHTML = `<strong>Mensaje nuevo de ${autor.innerHTML}</strong> (${time}): ${cuerpo.innerHTML}`;
+        });
+
+        dashboardConnection.start()
+            .catch(err => console.error("Error SignalR:", err.toString()));
+    </script>
+}

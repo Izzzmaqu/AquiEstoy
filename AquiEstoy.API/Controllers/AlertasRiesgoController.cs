@@ -1,5 +1,5 @@
-﻿using AquiEstoy.Application.DTOs;
-using AquiEstoy.Application.Services;
+using AquiEstoy.Application.DTOs.AlertasRiesgo;
+using AquiEstoy.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AquiEstoy.API.Controllers;
@@ -8,9 +8,9 @@ namespace AquiEstoy.API.Controllers;
 [Route("api/alertas-riesgo")]
 public class AlertasRiesgoController : ControllerBase
 {
-    private readonly AlertaRiesgoService _service;
+    private readonly IAlertaRiesgoService _service;
 
-    public AlertasRiesgoController(AlertaRiesgoService service)
+    public AlertasRiesgoController(IAlertaRiesgoService service)
     {
         _service = service;
     }

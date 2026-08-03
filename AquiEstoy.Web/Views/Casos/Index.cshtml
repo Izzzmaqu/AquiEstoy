@@ -1,0 +1,79 @@
+@model IEnumerable<AquiEstoy.Web.Models.Api.CasoListItem>
+@{
+    ViewData["Title"] = "Casos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">Casos registrados</h3>
+        <p class="text-muted mb-0">Consulta el estado de cada caso y actualiza sus notas.</p>
+    </div>
+</div>
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" role="alert">
+        @TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaCasos">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Paciente</th>
+                        <th>Profesional</th>
+                        <th>Severidad</th>
+                        <th>Estado</th>
+                        <th>Apertura</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No hay casos registrados aún.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var caso in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@caso.Id</td>
+                                <td>@caso.PacienteNombreCompleto</td>
+                                <td>@(caso.ProfesionalNombreCompleto ?? "Sin asignar")</td>
+                                <td>
+                                    <span class="badge rounded-pill"
+                                          style="background-color:@(caso.NivelSeveridadColor ?? "#6c757d")">
+                                        @caso.NivelSeveridadNombre
+                                    </span>
+                                </td>
+                                <td>@caso.EstadoCasoNombre</td>
+                                <td>@caso.FechaApertura.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <a asp-action="Editar" asp-route-id="@caso.Id"
+                                       class="btn btn-sm btn-outline-secondary rounded-3 px-3">
+                                        Editar
+                                    </a>
+                                    @if (caso.ConversacionId.HasValue)
+                                    {
+                                        <a asp-controller="Home" asp-action="ChatSeguro" asp-route-conversacionId="@caso.ConversacionId.Value"
+                                           class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                                            Chat
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -31,6 +31,9 @@ public class CasoService : ICasoService
         if (filtro.ProfesionalId.HasValue)
             query = query.Where(c => c.ProfesionalId == filtro.ProfesionalId.Value);
 
+        if (filtro.PacienteId.HasValue)
+            query = query.Where(c => c.PacienteId == filtro.PacienteId.Value);
+
         var casos = await query
             .OrderByDescending(c => c.FechaApertura)
             .ToListAsync();
@@ -224,7 +227,8 @@ public class CasoService : ICasoService
             .Include(c => c.Paciente).ThenInclude(p => p.Provincia)
             .Include(c => c.Profesional!).ThenInclude(p => p.Usuario)
             .Include(c => c.NivelSeveridad)
-            .Include(c => c.EstadoCaso);
+            .Include(c => c.EstadoCaso)
+            .Include(c => c.Conversaciones);
 
     private async Task<CasoListDto> RecargarListDtoAsync(int id)
     {
@@ -253,7 +257,11 @@ public class CasoService : ICasoService
         EstadoCasoNombre = c.EstadoCaso.Nombre,
         FechaApertura = c.FechaApertura,
         FechaCierre = c.FechaCierre,
-        Descripcion = c.Descripcion
+        Descripcion = c.Descripcion,
+        ConversacionId = c.Conversaciones
+            .OrderBy(conv => conv.Id)
+            .Select(conv => (int?)conv.Id)
+            .FirstOrDefault()
     };
 
     private static CasoDetalleDto MapToDetalleDto(Caso c)

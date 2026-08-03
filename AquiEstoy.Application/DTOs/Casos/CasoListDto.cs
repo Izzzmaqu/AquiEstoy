@@ -22,5 +22,13 @@ namespace AquiEstoy.Application.DTOs.Casos
         public DateTime FechaApertura { get; set; }
         public DateTime? FechaCierre { get; set; }
         public string? Descripcion { get; set; }
+
+        /// <summary>
+        /// Id de la conversacion asociada, o null si no tiene.
+        /// Es el unico identificador valido para abrir el chat: Casos.Id y
+        /// Conversaciones.Id son secuencias identity distintas que se solapan,
+        /// asi que confundirlos apunta a la conversacion de otro paciente.
+        /// </summary>
+        public int? ConversacionId { get; set; }
     }
 }

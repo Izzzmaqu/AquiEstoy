@@ -1,4 +1,4 @@
-﻿@model IEnumerable<AquiEstoy.Domain.Entities.Usuario>
+@model IEnumerable<AquiEstoy.Web.Models.Api.PacienteListItem>
 @{
     ViewData["Title"] = "Usuarios";
 }
@@ -57,16 +57,26 @@
                     {
                         @foreach (var user in Model)
                         {
-                            <tr>
+                            @* Solo el ConversacionId abre el chat: el CasoId apuntaría a otra conversación. *@
+                            var chatId = user.ConversacionId;
+                            <tr data-paciente-email="@user.Email">
                                 <td class="fw-semibold">@user.Identificacion</td>
                                 <td>@user.Nombre @user.Apellidos</td>
                                 <td>@user.Email</td>
                                 <td>@(user.Telefono ?? "N/A")</td>
                                 <td>@user.FechaRegistro.ToString("dd/MM/yyyy")</td>
                                 <td class="text-center">
-                                    <a asp-controller="Chat" asp-action="Index" asp-route-pacienteId="@user.Id" class="btn btn-sm btn-outline-primary rounded-3 px-3">
-                                        Ir al Chat
-                                    </a>
+                                    @if (chatId.HasValue)
+                                    {
+                                        <a asp-controller="Home" asp-action="ChatSeguro" asp-route-conversacionId="@chatId.Value"
+                                           class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                                            Ir al Chat
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Sin conversación</span>
+                                    }
                                 </td>
                             </tr>
                         }

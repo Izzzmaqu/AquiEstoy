@@ -1,32 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using AquiEstoy.Application.DTOs;
+using AquiEstoy.Application.DTOs.AlertasRiesgo;
+using AquiEstoy.Application.DTOs.LineasAyuda;
 using AquiEstoy.Application.Interfaces;
 using AquiEstoy.Domain.Entities;
 using AquiEstoy.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace AquiEstoy.Application.Services;
 
-public class AlertaRiesgoService
+public class AlertaRiesgoService : IAlertaRiesgoService
 {
-    private readonly IAlertaRiesgoRepository _repository;
+    /// <summary>
+    /// Nombre del TipoAlerta sembrado por DbInitializer para cada nivel calculado.
+    /// Bajo no se usa para persistir (ver EvaluarAsync) pero se deja aquí para
+    /// mantener el enum completo y evitar un catálogo desalineado.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<NivelRiesgo, string> NombresTiposAlertaPorNivel =
+        new Dictionary<NivelRiesgo, string>
+        {
+            [NivelRiesgo.Bajo] = "Riesgo Bajo",
+            [NivelRiesgo.Medio] = "Riesgo Medio",
+            [NivelRiesgo.Alto] = "Riesgo Alto",
+            [NivelRiesgo.Critico] = "Riesgo Crítico"
+        };
 
-    public AlertaRiesgoService(IAlertaRiesgoRepository repository)
+    private readonly IAquiEstoyDbContext _context;
+    private readonly ILineaAyudaService _lineaAyudaService;
+
+    public AlertaRiesgoService(IAquiEstoyDbContext context, ILineaAyudaService lineaAyudaService)
     {
-        _repository = repository;
+        _context = context;
+        _lineaAyudaService = lineaAyudaService;
     }
 
     public async Task<EvaluarRiesgoResponse> EvaluarAsync(
         EvaluarRiesgoRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.UsuarioId == Guid.Empty)
+        if (!await _context.Casos.AnyAsync(c => c.Id == request.CasoId, cancellationToken))
         {
-            throw new ArgumentException("El usuario es obligatorio.");
+            throw new ArgumentException($"No existe un Caso con Id {request.CasoId}.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Mensaje))
@@ -35,24 +47,44 @@ public class AlertaRiesgoService
         }
 
         NivelRiesgo nivel = CalcularNivel(request.PuntajeRiesgo);
+        string mensajeMostrado = ObtenerMensaje(nivel);
 
-        var alerta = new AlertaRiesgo
+        int? alertaId = null;
+
+        if (nivel != NivelRiesgo.Bajo)
         {
-            UsuarioId = request.UsuarioId,
-            Nivel = nivel,
-            Motivo = "Nivel de riesgo identificado durante el análisis.",
-            MensajeMostrado = ObtenerMensaje(nivel)
-        };
+            var nombreTipoAlerta = NombresTiposAlertaPorNivel[nivel];
 
-        await _repository.GuardarAsync(alerta, cancellationToken);
+            var tipoAlerta = await _context.TiposAlerta
+                .FirstOrDefaultAsync(t => t.Nombre == nombreTipoAlerta, cancellationToken);
+
+            if (tipoAlerta == null)
+            {
+                throw new InvalidOperationException(
+                    $"No existe un TipoAlerta con Nombre '{nombreTipoAlerta}'. Verifique el seed de TiposAlerta.");
+            }
+
+            var alerta = new Alerta
+            {
+                CasoId = request.CasoId,
+                TipoAlertaId = tipoAlerta.Id,
+                Descripcion = mensajeMostrado,
+                Atendida = false
+            };
+
+            _context.Alertas.Add(alerta);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            alertaId = alerta.Id;
+        }
 
         return new EvaluarRiesgoResponse
         {
-            AlertaId = alerta.Id,
+            AlertaId = alertaId,
             NivelRiesgo = nivel.ToString(),
             MostrarAlerta = nivel != NivelRiesgo.Bajo,
-            Mensaje = alerta.MensajeMostrado,
-            LineasAyuda = ObtenerLineasAyuda(nivel)
+            Mensaje = mensajeMostrado,
+            LineasAyuda = await ObtenerLineasAyudaAsync(nivel)
         };
     }
 
@@ -89,29 +121,19 @@ public class AlertaRiesgoService
         };
     }
 
-    private static List<LineaAyudaDto> ObtenerLineasAyuda(
-        NivelRiesgo nivel)
+    private async Task<List<LineaAyudaDto>> ObtenerLineasAyudaAsync(NivelRiesgo nivel)
     {
-        var lineas = new List<LineaAyudaDto>
-        {
-            new()
-            {
-                Nombre = "Línea Aquí Estoy",
-                Telefono = "800-2737869",
-                Horario = "Lunes a viernes de 2:00 p. m. a 10:00 p. m. y sábados de 9:00 a. m. a 4:00 p. m.",
-                EsEmergencia = false
-            }
-        };
+        var lineas = (await _lineaAyudaService.ListarActivasAsync()).ToList();
 
         if (nivel == NivelRiesgo.Critico)
         {
-            lineas.Insert(0, new LineaAyudaDto
+            var indiceEmergencias = lineas.FindIndex(l => l.Telefono == "911");
+            if (indiceEmergencias > 0)
             {
-                Nombre = "Sistema de Emergencias",
-                Telefono = "911",
-                Horario = "Disponible las 24 horas",
-                EsEmergencia = true
-            });
+                var emergencias = lineas[indiceEmergencias];
+                lineas.RemoveAt(indiceEmergencias);
+                lineas.Insert(0, emergencias);
+            }
         }
 
         return lineas;

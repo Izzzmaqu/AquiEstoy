@@ -427,3 +427,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Artefactos de sesiones del MCP de Playwright (snapshots y logs de consola)
+.playwright-mcp/

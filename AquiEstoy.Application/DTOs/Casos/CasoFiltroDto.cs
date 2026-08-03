@@ -9,5 +9,8 @@ namespace AquiEstoy.Application.DTOs.Casos
         public int? ProvinciaId { get; set; }
 
         public int? ProfesionalId { get; set; }
+
+        /// <summary>Filtra los casos de un paciente concreto (dashboard del paciente).</summary>
+        public int? PacienteId { get; set; }
     }
 }

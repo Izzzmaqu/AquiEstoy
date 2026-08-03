@@ -1,25 +1,38 @@
-using Microsoft.EntityFrameworkCore;
-using AquiEstoy.Infrastructure.Data; // Ajusta el namespace si tu DbContext está en otra carpeta
-using AquiEstoy.Web.Hubs;
+using AquiEstoy.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Obtener la cadena de conexión desde appsettings.json
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// 2. Registrar el DbContext con SQL Server
-builder.Services.AddDbContext<AquiEstoyDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
 builder.Services.AddControllersWithViews();
-builder.Services.AddSignalR();
+
+// Unica dependencia de datos de la capa Web: HTTP contra AquiEstoy.API.
+// Ya no hay DbContext ni referencia a Infrastructure/Domain.
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"]
+    ?? throw new InvalidOperationException(
+        "Falta la clave ApiSettings:BaseUrl en appsettings.json; la capa Web no sabe donde esta la API.");
+
+var apiClientBuilder = builder.Services.AddHttpClient<AquiEstoyApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+if (builder.Environment.IsDevelopment())
+{
+    // El certificado HTTPS de desarrollo de la API es autofirmado. Este bypass
+    // esta acotado a Development a proposito: en produccion debe validarse.
+    apiClientBuilder.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback =
+            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+    });
+}
 
 builder.Services.AddAuthentication("CookieAuth")
     .AddCookie("CookieAuth", config =>
     {
         config.Cookie.Name = "AquiEstoy.AuthCookie";
-        config.LoginPath = "/Account/Login"; // Redirecciona si no ha iniciado sesión
-        config.AccessDeniedPath = "/Account/AccessDenied"; // Redirecciona si no tiene permisos de rol
+        config.LoginPath = "/Account/Login";
+        config.AccessDeniedPath = "/Account/AccessDenied";
     });
 
 var app = builder.Build();
@@ -35,16 +48,11 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Habilitar la Autenticación 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Establecer el Login como la pantalla de inicio 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
-
-// MAPEAR LA RUTA DEL HUB DE SIGNALR
-app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

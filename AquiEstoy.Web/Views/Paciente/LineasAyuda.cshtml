@@ -1,0 +1,50 @@
+@model IEnumerable<AquiEstoy.Web.Models.Api.LineaAyudaItem>
+@{
+    Layout = "_LayoutPaciente";
+    ViewData["Title"] = "Números de Emergencia";
+}
+
+<div class="container-fluid p-0">
+    <div class="mb-4">
+        <h1 class="fw-bold fs-2 text-dark mb-1">Números de Emergencia</h1>
+        <p class="text-secondary fs-6">
+            Si estás en peligro inmediato, llama al 911. Estas líneas son gratuitas y confidenciales.
+        </p>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-warning rounded-3">
+            No hay líneas de ayuda disponibles en este momento.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var linea in Model)
+            {
+                <div class="col-md-6">
+                    <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                        <div class="fs-3 mb-2">📞</div>
+                        <h5 class="fw-bold">@linea.Nombre</h5>
+
+                        <p class="fs-4 fw-bold mb-2" style="color: #1b4d3e;">
+                            <a href="tel:@linea.Telefono.Replace(" ", "")" class="text-decoration-none" style="color: #1b4d3e;">
+                                @linea.Telefono
+                            </a>
+                        </p>
+
+                        @if (!string.IsNullOrWhiteSpace(linea.Descripcion))
+                        {
+                            <p class="text-muted small mb-0">@linea.Descripcion</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="mt-4">
+        <a asp-controller="Paciente" asp-action="PacienteDashboard" class="btn btn-light rounded-3 px-4">Volver</a>
+    </div>
+</div>

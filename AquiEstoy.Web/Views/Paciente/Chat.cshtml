@@ -1,11 +1,17 @@
-﻿@model IEnumerable<AquiEstoy.Domain.Entities.Mensaje>
+@model IEnumerable<AquiEstoy.Web.Models.Api.MensajeItem>
+@inject IConfiguration Configuration
 
 @{
     Layout = "_LayoutPaciente";
     ViewData["Title"] = "Chat Seguro";
 
-    var conversacionId = ViewBag.ConversacionId ?? 1;
-    var pacienteUserId = 1; // ID asignado al Paciente en la DB
+    var conversacionId = ViewBag.ConversacionId ?? 0;
+
+    // Id real del paciente en sesión, tomado del claim. Ya no hay un Id fijo.
+    var usuarioId = ViewBag.UsuarioId ?? 0;
+    var sinConversacion = ViewBag.SinConversacion == true;
+
+    var hubUrl = $"{Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/')}/hubs/chat";
 }
 
 <div class="container-fluid p-0">
@@ -14,111 +20,136 @@
         <p class="text-muted small">Estás conectado con un profesional de la salud mental.</p>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <!-- ÁREA DE MENSAJES (HISTORIAL DE BASE DE DATOS + TIEMPO REAL) -->
-        <div class="card-body p-4" id="chatMessages" style="height: 380px; overflow-y: auto; background-color: #fafafa;">
-            <div class="text-center text-muted small my-2">-- Inicio del chat seguro --</div>
-
-            @if (Model != null && Model.Any())
-            {
-                @foreach (var msg in Model)
-                {
-                    // Evalúa si el mensaje fue enviado por el Paciente actual
-                    var isMe = msg.RemitenteId == pacienteUserId;
-                    var align = isMe ? "text-end" : "text-start";
-                    var bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
-
-                    <div class="@align mb-3">
-                        <div class="d-inline-block p-3 rounded-4 @bgClass" style="max-width: 75%;">
-                            <strong class="d-block small @(isMe ? "text-white-50" : "text-muted")">
-                                @(msg.Remitente?.Nombre ?? (isMe ? "Tú" : "Profesional")) • @msg.FechaEnvio.ToLocalTime().ToString("HH:mm")
-                            </strong>
-                            <div>@msg.Contenido</div>
-                        </div>
-                    </div>
-                }
-            }
+    @if (sinConversacion)
+    {
+        <div class="alert alert-warning rounded-3">
+            Todavía no tienes una conversación asignada. Contacta a tu profesional.
         </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <!-- ÁREA DE MENSAJES (HISTORIAL API + TIEMPO REAL) -->
+            <div class="card-body p-4" id="chatMessages" style="height: 380px; overflow-y: auto; background-color: #fafafa;">
+                <div class="text-center text-muted small my-2">-- Inicio del chat seguro --</div>
 
-        <!-- BARRA DE ENVÍO -->
-        <div class="card-footer bg-white p-3 border-top-0">
-            <div class="input-group">
-                <input type="text" id="messageInput" class="form-control rounded-pill px-3" placeholder="Escribe tu mensaje aquí..." autocomplete="off" />
-                <button class="btn text-white rounded-pill px-4 ms-2" style="background-color: #2d6a4f;" id="sendButton">Enviar</button>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var msg in Model)
+                    {
+                        var isMe = msg.RemitenteId == (int)usuarioId;
+                        var align = isMe ? "text-end" : "text-start";
+                        var bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
+
+                        <div class="@align mb-3">
+                            <div class="d-inline-block p-3 rounded-4 @bgClass" style="max-width: 75%;">
+                                <strong class="d-block small @(isMe ? "text-white-50" : "text-muted")">
+                                    @(isMe ? "Tú" : msg.RemitenteNombre) • @msg.FechaEnvio.ToLocalTime().ToString("HH:mm")
+                                </strong>
+                                <div>@msg.Contenido</div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- BARRA DE ENVÍO -->
+            <div class="card-footer bg-white p-3 border-top-0">
+                <div class="input-group">
+                    <input type="text" id="messageInput" class="form-control rounded-pill px-3" placeholder="Escribe tu mensaje aquí..." autocomplete="off" />
+                    <button class="btn text-white rounded-pill px-4 ms-2" style="background-color: #2d6a4f;" id="sendButton">Enviar</button>
+                </div>
+                <div class="small mt-2" id="chatStatus" data-state="desconectado">
+                    <span class="text-muted">Conectando al servicio de chat...</span>
+                </div>
             </div>
         </div>
-    </div>
+    }
 </div>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
-    <script>
-        const casoId = "@conversacionId";
-        const userId = "@pacienteUserId";
-        const userName = "Paciente";
+    @if (!sinConversacion)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+        <script>
+            const casoId = "@conversacionId";
+            const userId = "@usuarioId";
 
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/chatHub")
-            .withAutomaticReconnect()
-            .build();
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("@hubUrl")
+                .withAutomaticReconnect()
+                .build();
 
-        // 1. Recibir mensajes en tiempo real vía SignalR
-        connection.on("ReceiveMessage", function (user, message, time) {
-            const isMe = user === userName || user === userId;
-            const align = isMe ? "text-end" : "text-start";
-            var bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
+            // Se expone para que la prueba E2E pueda comprobar el estado real de la conexión.
+            window.chatConnection = connection;
 
-            const msgHtml = `
-                <div class="${align} mb-3">
-                    <div class="d-inline-block p-3 rounded-4 ${bgClass}" style="max-width: 75%;">
-                        <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${isMe ? 'Tú' : 'Profesional'} • ${time}</strong>
-                        <div>${escapeHtml(message)}</div>
-                    </div>
-                </div>`;
-
-            const chatMessages = document.getElementById("chatMessages");
-            if (chatMessages) {
-                chatMessages.innerHTML += msgHtml;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+            function setStatus(estado, texto, cssClass) {
+                const el = document.getElementById("chatStatus");
+                if (!el) return;
+                el.dataset.state = estado;
+                el.innerHTML = `<span class="${cssClass}">${texto}</span>`;
             }
-        });
 
-        // 2. Iniciar conexión y unirse al grupo de la conversación
-        connection.start().then(function () {
-            return connection.invoke("JoinCaseGroup", casoId);
-        }).catch(err => console.error("Error SignalR:", err.toString()));
+            // El hub envía también el nombre, para que el mensaje en vivo muestre lo mismo
+            // que el historial tras recargar.
+            connection.on("ReceiveMessage", function (user, userName, message, time) {
+                const isMe = user === userId;
+                const align = isMe ? "text-end" : "text-start";
+                const bgClass = isMe ? "bg-success text-white" : "bg-light text-dark";
+                const etiqueta = isMe ? 'Tú' : escapeHtml(userName ?? '');
 
-        // 3. Función para enviar mensaje
-        function sendMessage() {
-            const input = document.getElementById("messageInput");
-            const message = input.value.trim();
+                const msgHtml = `
+                    <div class="${align} mb-3">
+                        <div class="d-inline-block p-3 rounded-4 ${bgClass}" style="max-width: 75%;">
+                            <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${etiqueta} • ${time}</strong>
+                            <div>${escapeHtml(message)}</div>
+                        </div>
+                    </div>`;
 
-            if (message !== "") {
-                connection.invoke("SendMessage", userId, message, casoId)
-                    .then(() => {
-                        input.value = "";
-                    })
-                    .catch(err => console.error("Error al enviar:", err.toString()));
+                const chatBox = document.getElementById("chatMessages");
+                if (chatBox) {
+                    chatBox.innerHTML += msgHtml;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            });
+
+            connection.start()
+                .then(() => connection.invoke("JoinCaseGroup", casoId))
+                .then(() => setStatus("conectado", "Conectado al servicio de chat.", "text-success"))
+                .catch(err => {
+                    console.error("Error SignalR:", err.toString());
+                    setStatus("error", "Sin conexión con el servicio de chat.", "text-danger");
+                });
+
+            function sendMessage() {
+                const input = document.getElementById("messageInput");
+                const message = input.value.trim();
+
+                if (message !== "") {
+                    connection.invoke("SendMessage", userId, message, casoId)
+                        .then(() => { input.value = ""; })
+                        .catch(err => console.error("Error al enviar:", err.toString()));
+                }
             }
-        }
 
-        document.getElementById("sendButton").addEventListener("click", sendMessage);
-        document.getElementById("messageInput").addEventListener("keypress", function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-                e.preventDefault();
+            document.getElementById("sendButton").addEventListener("click", sendMessage);
+            document.getElementById("messageInput").addEventListener("keypress", function (e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                    e.preventDefault();
+                }
+            });
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.innerText = text;
+                return div.innerHTML;
             }
-        });
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.innerText = text;
-            return div.innerHTML;
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const chatMessages = document.getElementById("chatMessages");
-            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-    </script>
+            window.addEventListener('DOMContentLoaded', () => {
+                const chatBox = document.getElementById("chatMessages");
+                if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        </script>
+    }
 }

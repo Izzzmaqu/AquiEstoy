@@ -1,12 +1,18 @@
-﻿@{
+@model IEnumerable<AquiEstoy.Web.Models.Api.CasoListItem>
+@{
     Layout = "_LayoutPaciente";
     ViewData["Title"] = "Centro de Apoyo";
+
+    var nombre = ViewBag.NombreCompleto as string;
+    var miCaso = Model?.OrderByDescending(c => c.FechaApertura).FirstOrDefault();
 }
 
 <div class="container-fluid p-0">
     <!-- Encabezado de Bienvenida -->
     <div class="mb-4">
-        <h1 class="fw-bold fs-2 text-dark mb-1">Centro de Apoyo y Acompañamiento</h1>
+        <h1 class="fw-bold fs-2 text-dark mb-1">
+            @(string.IsNullOrWhiteSpace(nombre) ? "Centro de Apoyo y Acompañamiento" : $"Hola, {nombre}")
+        </h1>
         <p class="text-secondary fs-6">
             Estamos aquí para escucharte y ayudarte. Puedes comunicarte en un entorno seguro y confidencial.
         </p>
@@ -17,22 +23,21 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h4 class="fw-bold mb-1" style="color: #1b4d3e;">¿Necesitas hablar con alguien ahora mismo?</h4>
-                <p class="m-0 text-muted" style="color: #2d6a4f !important;">Nuestros profesionales están disponibles para atenderte por chat en tiempo real.</p>
+                <p class="m-0" style="color: #2d6a4f;">Nuestros profesionales están disponibles para atenderte por chat en tiempo real.</p>
             </div>
-            <a asp-controller="Paciente" asp-action="Chat" class="btn text-white font-weight-bold px-4 py-2 rounded-3" style="background-color: #1b4d3e;">
+            <a asp-controller="Paciente" asp-action="Chat" class="btn text-white fw-bold px-4 py-2 rounded-3" style="background-color: #1b4d3e;">
                 Iniciar Chat Seguro
             </a>
         </div>
     </div>
 
-    
     <div class="row g-4">
         <!-- Chat Seguro -->
         <div class="col-md-4">
             <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
                 <div class="fs-3 mb-2">💬</div>
                 <h5 class="fw-bold">Chat Seguro</h5>
-                <p class="text-muted small">Conéctate de forma anónima o registrada con un profesional de la salud mental.</p>
+                <p class="text-muted small">Conéctate con un profesional de la salud mental en un canal privado.</p>
                 <a asp-controller="Paciente" asp-action="Chat" class="text-decoration-none fw-bold small" style="color: #1b4d3e;">Ir al chat &rarr;</a>
             </div>
         </div>
@@ -42,18 +47,34 @@
             <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
                 <div class="fs-3 mb-2">📞</div>
                 <h5 class="fw-bold">Líneas de Ayuda</h5>
-                <p class="text-muted small">Directorio telefónico de emergencia y atención en crisis disponible 24/7 en Costa Rica.</p>
+                <p class="text-muted small">Directorio telefónico de emergencia y atención en crisis en Costa Rica.</p>
                 <a asp-controller="Paciente" asp-action="LineasAyuda" class="text-decoration-none fw-bold small" style="color: #1b4d3e;">Ver números &rarr;</a>
             </div>
         </div>
 
-        <!-- Registro de Usuario / Perfil -->
+        <!-- Estado del seguimiento -->
         <div class="col-md-4">
             <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
-                <div class="fs-3 mb-2">👤</div>
-                <h5 class="fw-bold">Registro / Mi Cuenta</h5>
-                <p class="text-muted small">Crea tu cuenta para dar seguimiento personal a tus conversaciones e historial.</p>
-                <a asp-controller="Paciente" asp-action="Perfil" class="text-decoration-none fw-bold small" style="color: #1b4d3e;">Registrarme &rarr;</a>
+                <div class="fs-3 mb-2">📋</div>
+                <h5 class="fw-bold">Mi seguimiento</h5>
+
+                @if (miCaso == null)
+                {
+                    <p class="text-muted small mb-0">Todavía no tienes un seguimiento abierto.</p>
+                }
+                else
+                {
+                    <p class="text-muted small mb-1">
+                        Estado: <span class="fw-semibold text-dark">@miCaso.EstadoCasoNombre</span>
+                    </p>
+                    <p class="text-muted small mb-1">
+                        Acompañamiento:
+                        <span class="fw-semibold text-dark">@(miCaso.ProfesionalNombreCompleto ?? "Por asignar")</span>
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Desde el @miCaso.FechaApertura.ToLocalTime().ToString("dd/MM/yyyy")
+                    </p>
+                }
             </div>
         </div>
     </div>

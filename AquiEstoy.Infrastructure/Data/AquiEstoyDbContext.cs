@@ -1,6 +1,7 @@
 ﻿using AquiEstoy.Application.Interfaces;
 using AquiEstoy.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace AquiEstoy.Infrastructure.Data
 {
@@ -37,10 +38,15 @@ namespace AquiEstoy.Infrastructure.Data
         public DbSet<ReporteEstadistico> ReportesEstadisticos => Set<ReporteEstadistico>();
         public DbSet<SesionChat> SesionesChat => Set<SesionChat>();
 
-        // Método implementado de IAquiEstoyDbContext
+        // Métodos implementados de IAquiEstoyDbContext
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);
+        }
+
+        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            return Database.BeginTransactionAsync(cancellationToken);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

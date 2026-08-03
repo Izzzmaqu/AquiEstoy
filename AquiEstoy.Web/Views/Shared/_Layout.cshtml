@@ -103,11 +103,8 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#">Casos</a>
-                </li>
-                <li>
-                    <a asp-controller="Home" asp-action="ChatSeguro" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "ChatSeguro" ? "active" : "")">
-                        Chat seguro
+                    <a asp-controller="Casos" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Casos" ? "active" : "")">
+                        Casos
                     </a>
                 </li>
                 <li>

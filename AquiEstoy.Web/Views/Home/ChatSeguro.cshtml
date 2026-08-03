@@ -1,16 +1,21 @@
-﻿@model IEnumerable<AquiEstoy.Domain.Entities.Mensaje>
+@model IEnumerable<AquiEstoy.Web.Models.Api.MensajeItem>
+@inject IConfiguration Configuration
 
 @{
     ViewData["Title"] = "Consola de Atención en Crisis";
 
-    // Obtener la identificación de la conversación desde ViewBag
-    var conversacionId = ViewBag.ConversacionId ?? 1;
-    var profesionalUserId = 2; // ID asignado al Profesional en la DB
+    var conversacionId = ViewBag.ConversacionId ?? 0;
+
+    // Id real del usuario en sesión, tomado del claim. Ya no hay un Id fijo.
+    var usuarioId = ViewBag.UsuarioId ?? 0;
+
+    // El hub vive en la API, no en este proyecto.
+    var hubUrl = $"{Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/')}/hubs/chat";
 }
 
 <div class="container-fluid p-0">
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <!-- ÁREA DE MENSAJES (HISTORIAL DB + TIEMPO REAL) -->
+        <!-- ÁREA DE MENSAJES (HISTORIAL API + TIEMPO REAL) -->
         <div class="card-body p-4" id="chatMessagesAdmin" style="height: 380px; overflow-y: auto; background-color: #fafafa;">
             <div class="text-center text-muted small my-2">-- Sesión de atención iniciada --</div>
 
@@ -18,15 +23,14 @@
             {
                 @foreach (var msg in Model)
                 {
-                    // Evalúa si el mensaje fue enviado por el Profesional actual
-                    var isMe = msg.RemitenteId == profesionalUserId;
+                    var isMe = msg.RemitenteId == (int)usuarioId;
                     var align = isMe ? "text-end" : "text-start";
                     var bgClass = isMe ? "bg-dark text-white" : "bg-white border text-dark";
 
                     <div class="@align mb-3">
                         <div class="d-inline-block p-3 rounded-4 @bgClass" style="max-width: 75%;">
                             <strong class="d-block small @(isMe ? "text-white-50" : "text-muted")">
-                                @(msg.Remitente?.Nombre ?? (isMe ? "Profesional" : $"Paciente ({msg.RemitenteId})")) • @msg.FechaEnvio.ToLocalTime().ToString("HH:mm")
+                                @(isMe ? "Tú" : msg.RemitenteNombre) • @msg.FechaEnvio.ToLocalTime().ToString("HH:mm")
                             </strong>
                             <div>@msg.Contenido</div>
                         </div>
@@ -41,6 +45,9 @@
                 <input type="text" id="messageInputAdmin" class="form-control rounded-pill px-3" placeholder="Escribe tu respuesta al paciente..." autocomplete="off" />
                 <button class="btn btn-dark rounded-pill px-4 ms-2" id="sendButtonAdmin">Enviar Respuesta</button>
             </div>
+            <div class="small mt-2" id="chatStatusAdmin" data-state="desconectado">
+                <span class="text-muted">Conectando al servicio de chat...</span>
+            </div>
         </div>
     </div>
 </div>
@@ -49,24 +56,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
         const casoId = "@conversacionId";
-        const userId = "@profesionalUserId";
-        const userName = "Profesional";
+        const userId = "@usuarioId";
 
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/chatHub")
+            .withUrl("@hubUrl")
             .withAutomaticReconnect()
             .build();
 
-        // 1. Recibir mensajes en tiempo real
-        connection.on("ReceiveMessage", function (user, message, time) {
-            const isMe = user === userName || user === userId;
+        // Se expone para que la prueba E2E pueda comprobar el estado real de la conexión.
+        window.chatConnection = connection;
+
+        function setStatus(estado, texto, cssClass) {
+            const el = document.getElementById("chatStatusAdmin");
+            if (!el) return;
+            el.dataset.state = estado;
+            el.innerHTML = `<span class="${cssClass}">${texto}</span>`;
+        }
+
+        // El hub envía también el nombre, para que el mensaje en vivo muestre lo mismo
+        // que el historial tras recargar.
+        connection.on("ReceiveMessage", function (user, userName, message, time) {
+            const isMe = user === userId;
             const align = isMe ? "text-end" : "text-start";
             const bgClass = isMe ? "bg-dark text-white" : "bg-white border text-dark";
+            const etiqueta = isMe ? 'Tú' : escapeHtml(userName ?? '');
 
             const msgHtml = `
                 <div class="${align} mb-3">
                     <div class="d-inline-block p-3 rounded-4 ${bgClass}" style="max-width: 75%;">
-                        <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${isMe ? 'Profesional' : 'Paciente'} • ${time}</strong>
+                        <strong class="d-block small ${isMe ? 'text-white-50' : 'text-muted'}">${etiqueta} • ${time}</strong>
                         <div>${escapeHtml(message)}</div>
                     </div>
                 </div>`;
@@ -78,21 +96,21 @@
             }
         });
 
-        // 2. Iniciar conexión y unirse al grupo de la conversación
-        connection.start().then(function () {
-            return connection.invoke("JoinCaseGroup", casoId);
-        }).catch(err => console.error("Error SignalR:", err.toString()));
+        connection.start()
+            .then(() => connection.invoke("JoinCaseGroup", casoId))
+            .then(() => setStatus("conectado", "Conectado al servicio de chat.", "text-success"))
+            .catch(err => {
+                console.error("Error SignalR:", err.toString());
+                setStatus("error", "Sin conexión con el servicio de chat.", "text-danger");
+            });
 
-        // 3. Enviar respuesta del profesional
         function sendMessage() {
             const input = document.getElementById("messageInputAdmin");
             const message = input.value.trim();
 
             if (message !== "") {
                 connection.invoke("SendMessage", userId, message, casoId)
-                    .then(() => {
-                        input.value = "";
-                    })
+                    .then(() => { input.value = ""; })
                     .catch(err => console.error("Error al enviar:", err.toString()));
             }
         }
