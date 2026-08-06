@@ -31,6 +31,7 @@ namespace AquiEstoy.Infrastructure
             services.AddScoped<IConversacionService, ConversacionService>();
             services.AddScoped<ICatalogoService, CatalogoService>();
             services.AddScoped<IAlertaRiesgoService, AlertaRiesgoService>();
+            services.AddScoped<IEstadisticaService, EstadisticaService>();
 
             return services;
         }

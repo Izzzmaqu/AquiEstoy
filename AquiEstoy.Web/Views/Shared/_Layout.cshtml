@@ -108,6 +108,11 @@
                     </a>
                 </li>
                 <li>
+                    <a asp-controller="Estadisticas" asp-action="Index"class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Estadisticas" ? "active" : "")">
+                        Análisis estadístico
+                    </a>
+                </li>
+                <li>
                     <a asp-controller="Usuarios" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")">
                         Usuarios
                     </a>

@@ -1,0 +1,172 @@
+﻿@model AquiEstoy.Web.Models.Api.PanelEstadistico
+
+@{
+    ViewData["Title"] = "Análisis estadístico";
+}
+
+<link rel="stylesheet"
+      href="~/css/estadisticas.css"
+      asp-append-version="true" />
+
+<div class="estadisticas-page">
+
+    <div class="encabezado-panel">
+        <div>
+            <span class="subtitulo-panel">Resumen general</span>
+            <h1>Panel de análisis estadístico</h1>
+            <p>
+                Visualización de casos, niveles de riesgo,
+                alertas y factores registrados en el sistema.
+            </p>
+        </div>
+
+        <div class="fecha-panel">
+            Actualizado:
+            <strong>@DateTime.Now.ToString("dd/MM/yyyy")</strong>
+        </div>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-warning">
+            @ViewBag.Error
+        </div>
+    }
+
+    <section class="tarjetas-resumen">
+
+        <article class="tarjeta-estadistica">
+            <div class="tarjeta-icono icono-total">
+                <span>01</span>
+            </div>
+
+            <div>
+                <p>Total de casos</p>
+                <h2>@Model.TotalCasos</h2>
+                <small>Casos registrados</small>
+            </div>
+        </article>
+
+        <article class="tarjeta-estadistica">
+            <div class="tarjeta-icono icono-abiertos">
+                <span>02</span>
+            </div>
+
+            <div>
+                <p>Casos abiertos</p>
+                <h2>@Model.CasosAbiertos</h2>
+                <small>Requieren seguimiento</small>
+            </div>
+        </article>
+
+        <article class="tarjeta-estadistica">
+            <div class="tarjeta-icono icono-cerrados">
+                <span>03</span>
+            </div>
+
+            <div>
+                <p>Casos cerrados</p>
+                <h2>@Model.CasosCerrados</h2>
+                <small>Procesos finalizados</small>
+            </div>
+        </article>
+
+        <article class="tarjeta-estadistica">
+            <div class="tarjeta-icono icono-alertas">
+                <span>04</span>
+            </div>
+
+            <div>
+                <p>Alertas pendientes</p>
+                <h2>@Model.AlertasPendientes</h2>
+                <small>Necesitan atención</small>
+            </div>
+        </article>
+
+    </section>
+
+    <section class="rejilla-graficos">
+
+        <article class="contenedor-grafico grafico-grande">
+            <div class="titulo-grafico">
+                <div>
+                    <h3>Evolución mensual de casos</h3>
+                    <p>Casos abiertos durante los últimos seis meses</p>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <canvas id="graficoMeses"></canvas>
+            </div>
+        </article>
+
+        <article class="contenedor-grafico">
+            <div class="titulo-grafico">
+                <div>
+                    <h3>Niveles de severidad</h3>
+                    <p>Distribución actual de los casos</p>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <canvas id="graficoSeveridad"></canvas>
+            </div>
+        </article>
+
+        <article class="contenedor-grafico">
+            <div class="titulo-grafico">
+                <div>
+                    <h3>Casos por provincia</h3>
+                    <p>Distribución geográfica de los registros</p>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper canvas-alto">
+                <canvas id="graficoProvincias"></canvas>
+            </div>
+        </article>
+
+        <article class="contenedor-grafico">
+            <div class="titulo-grafico">
+                <div>
+                    <h3>Factores de riesgo frecuentes</h3>
+                    <p>Principales factores identificados</p>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper canvas-alto">
+                <canvas id="graficoFactores"></canvas>
+            </div>
+        </article>
+
+        <article class="contenedor-grafico">
+            <div class="titulo-grafico">
+                <div>
+                    <h3>Estado de los casos</h3>
+                    <p>Situación actual de los registros</p>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <canvas id="graficoEstados"></canvas>
+            </div>
+        </article>
+
+    </section>
+</div>
+
+<script>
+    window.datosPanelEstadistico = {
+        casosPorMes: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorMes)),
+        casosPorSeveridad: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorSeveridad)),
+        casosPorProvincia: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorProvincia)),
+        factoresRiesgo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.FactoresRiesgoFrecuentes)),
+        casosPorEstado: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorEstado))
+    };
+</script>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/estadisticas.js"
+            asp-append-version="true"></script>
+}

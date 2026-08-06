@@ -110,6 +110,9 @@ namespace AquiEstoy.Web.Services
         public Task<DashboardResumen?> ObtenerResumenAsync() =>
             GetAsync<DashboardResumen>("api/dashboard/resumen");
 
+        public Task<PanelEstadistico?> ObtenerPanelEstadisticoAsync() =>
+            GetAsync<PanelEstadistico>("api/estadisticas/panel");
+
         public Task<IReadOnlyList<EstadoCasoItem>> ListarEstadosCasoAsync() =>
             GetListAsync<EstadoCasoItem>("api/catalogos/estados-caso");
 
