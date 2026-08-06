@@ -14,7 +14,12 @@ namespace AquiEstoy.Infrastructure
         {
             // Registra el DbContext para Entity Framework
             services.AddDbContext<AquiEstoyDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(30),
+                        errorNumbersToAdd: null)));
 
             // Mapea la interfaz de la capa Application hacia la implementación concreta en Infrastructure
             services.AddScoped<IAquiEstoyDbContext>(provider => provider.GetRequiredService<AquiEstoyDbContext>());
