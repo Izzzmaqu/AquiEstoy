@@ -41,6 +41,16 @@ namespace AquiEstoy.Infrastructure
         }
 
         /// <summary>
+        /// Aplica las migraciones pendientes a la base de datos.
+        /// </summary>
+        public static async Task MigrateDatabaseAsync(this IServiceProvider services)
+        {
+            using var scope = services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AquiEstoyDbContext>();
+            await context.Database.MigrateAsync();
+        }
+
+        /// <summary>
         /// Aplica el seed de catálogos. Pensado para llamarse solo en Development.
         /// Es idempotente, así que repetirlo en cada arranque no duplica datos.
         /// </summary>
