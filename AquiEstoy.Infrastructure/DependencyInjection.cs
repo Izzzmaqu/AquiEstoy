@@ -14,7 +14,12 @@ namespace AquiEstoy.Infrastructure
         {
             // Registra el DbContext para Entity Framework
             services.AddDbContext<AquiEstoyDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(30),
+                        errorNumbersToAdd: null)));
 
             // Mapea la interfaz de la capa Application hacia la implementación concreta en Infrastructure
             services.AddScoped<IAquiEstoyDbContext>(provider => provider.GetRequiredService<AquiEstoyDbContext>());
@@ -34,6 +39,16 @@ namespace AquiEstoy.Infrastructure
             services.AddScoped<IEstadisticaService, EstadisticaService>();
 
             return services;
+        }
+
+        /// <summary>
+        /// Aplica las migraciones pendientes a la base de datos.
+        /// </summary>
+        public static async Task MigrateDatabaseAsync(this IServiceProvider services)
+        {
+            using var scope = services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AquiEstoyDbContext>();
+            await context.Database.MigrateAsync();
         }
 
         /// <summary>

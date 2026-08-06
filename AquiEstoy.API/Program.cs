@@ -40,6 +40,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
+    // Aplica las migraciones pendientes automáticamente en Development
+    try
+    {
+        await app.Services.MigrateDatabaseAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex,
+            "No se pudieron aplicar las migraciones. Verifique que SQL Server este accesible " +
+            "en la cadena ConnectionStrings:DefaultConnection.");
+        throw;
+    }
+
     // Catalogos minimos para que el registro de pacientes y las alertas de riesgo funcionen. Idempotente.
     try
     {
@@ -48,11 +61,10 @@ if (app.Environment.IsDevelopment())
     catch (Exception ex)
     {
         // Se falla rapido a proposito: sin catalogos el registro de pacientes no
-        // puede funcionar. El mensaje dice que revisar en vez de soltar solo el stack.
+        // puede funcionar.
         app.Logger.LogError(ex,
             "No se pudo sembrar la base de datos. Verifique que SQL Server este accesible " +
-            "en la cadena ConnectionStrings:DefaultConnection y que las migraciones esten aplicadas " +
-            "(dotnet ef database update --project AquiEstoy.Infrastructure --startup-project AquiEstoy.API).");
+            "en la cadena ConnectionStrings:DefaultConnection.");
         throw;
     }
 }
