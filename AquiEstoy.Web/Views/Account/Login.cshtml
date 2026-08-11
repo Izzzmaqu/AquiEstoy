@@ -1,6 +1,7 @@
 ﻿@model AquiEstoy.Web.Models.LoginViewModel
+@inject IWebHostEnvironment Entorno
 @{
-    Layout = null; 
+    Layout = null;
 }
 
 <!DOCTYPE html>
@@ -71,13 +72,18 @@
             <button type="submit" class="btn btn-mint w-100 py-2 rounded-3 mb-3">Iniciar Sesión</button>
         </form>
 
-        <div class="p-3 rounded-3 mt-3 text-start small" style="background-color: #f8faf9; border: 1px solid #e2e8f0;">
-            <span class="fw-bold d-block text-muted mb-1">Usuario de prueba (solo en Development):</span>
-            <div>👨‍💼 <b>Profesional:</b> profesional@aquiestoy.com / Demo1234!</div>
-            <div class="text-muted mt-1">
-                Los pacientes acceden con el correo y la contraseña asignados al registrarlos.
+        @* Credenciales de demo: solo se renderizan en Development. Fuera de ahi este
+           bloque no llega ni al HTML, asi que no queda en el codigo fuente de la pagina. *@
+        @if (Entorno.IsDevelopment())
+        {
+            <div class="p-3 rounded-3 mt-3 text-start small" style="background-color: #f8faf9; border: 1px solid #e2e8f0;">
+                <span class="fw-bold d-block text-muted mb-1">Usuario de prueba (solo en Development):</span>
+                <div>👨‍💼 <b>Profesional:</b> profesional@aquiestoy.com / Demo1234!</div>
+                <div class="text-muted mt-1">
+                    Los pacientes acceden con el correo y la contraseña asignados al registrarlos.
+                </div>
             </div>
-        </div>
+        }
     </div>
 
 </body>

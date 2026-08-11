@@ -7,17 +7,62 @@
 
     var severidades = ViewBag.NivelesSeveridad as IReadOnlyList<AquiEstoy.Web.Models.Api.NivelSeveridadItem>
                       ?? new List<AquiEstoy.Web.Models.Api.NivelSeveridadItem>();
+
+    var factoresRiesgo = ViewBag.FactoresRiesgo as IReadOnlyList<AquiEstoy.Web.Models.Api.FactorRiesgoItem>
+                         ?? new List<AquiEstoy.Web.Models.Api.FactorRiesgoItem>();
+
+    var casoCerrado = Model.FechaCierre != null;
 }
 
 <div class="mb-4">
     <h3 class="fw-bold text-dark mb-1">Caso #@Model.Id</h3>
-    <p class="text-muted mb-0">@Model.PacienteNombreCompleto</p>
+    <p class="text-muted mb-0">
+        @Model.PacienteNombreCompleto
+        @if (casoCerrado)
+        {
+            <span class="badge bg-secondary ms-2">
+                Cerrado el @Model.FechaCierre!.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+            </span>
+        }
+    </p>
 </div>
 
 @if (!ViewData.ModelState.IsValid)
 {
     <div class="alert alert-danger rounded-3 mb-4" role="alert">
         <div asp-validation-summary="All" class="mb-0"></div>
+    </div>
+}
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" role="alert">
+        @TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["RiesgoNivel"] != null)
+{
+    var mostrarAlerta = TempData["RiesgoMostrarAlerta"] as bool? ?? false;
+    var alertaId = TempData["RiesgoAlertaId"];
+
+    <div class="alert @(mostrarAlerta ? "alert-danger" : "alert-info") rounded-3 mb-4" role="alert"
+         id="resultadoEvaluacionRiesgo">
+        <div class="fw-bold mb-1">Nivel de riesgo: @TempData["RiesgoNivel"]</div>
+        <div class="small mb-0">@TempData["RiesgoMensaje"]</div>
+        @if (alertaId != null)
+        {
+            <div class="small text-muted mt-1">Se generó la alerta #@alertaId.</div>
+        }
     </div>
 }
 
@@ -64,11 +109,126 @@
                         <a asp-action="Index" class="btn btn-light rounded-3 px-4">Volver</a>
                     </div>
                 </form>
+
+                @* Cerrar va por su propio form: el PUT de "Guardar cambios" cambia el estado
+                   pero no asigna FechaCierre. Solo PATCH /api/casos/{id}/cerrar lo hace. *@
+                @if (!casoCerrado)
+                {
+                    <hr class="my-4" />
+
+                    <form asp-action="Cerrar" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <label class="form-label fw-semibold" for="notasCierre">Notas de cierre</label>
+                        <textarea name="notas" id="notasCierre" rows="2" class="form-control rounded-3 mb-2"
+                                  placeholder="Motivo del cierre (opcional)...">@Model.Notas</textarea>
+
+                        <button type="submit" id="btnCerrarCaso" class="btn btn-outline-danger rounded-3 px-4">
+                            Cerrar caso
+                        </button>
+                        <div class="form-text">Registra la fecha de cierre y marca el caso como Cerrado.</div>
+                    </form>
+                }
             </div>
         </div>
     </div>
 
     <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Factores de riesgo</h6>
+
+                @if (!Model.FactoresRiesgo.Any())
+                {
+                    <p class="text-muted small">Sin factores registrados.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-3" id="listaFactoresRiesgo">
+                        @foreach (var f in Model.FactoresRiesgo)
+                        {
+                            <li class="border-bottom py-2">
+                                <div class="small fw-semibold">@f.FactorRiesgoNombre</div>
+                                <div class="small text-muted">
+                                    @f.CategoriaNombre • @f.FechaRegistro.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(f.Observacion))
+                                {
+                                    <div class="small text-muted fst-italic">@f.Observacion</div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (!factoresRiesgo.Any())
+                {
+                    <p class="text-muted small mb-0">
+                        El catálogo de factores está vacío. Verifique que el seed de Development se haya ejecutado.
+                    </p>
+                }
+                else
+                {
+                    <form asp-action="AgregarFactorRiesgo" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small" for="factorRiesgoId">Agregar factor</label>
+                            <select name="factorRiesgoId" id="factorRiesgoId" class="form-select form-select-sm rounded-3" required>
+                                <option value="">Seleccione un factor...</option>
+                                @foreach (var grupo in factoresRiesgo.GroupBy(f => f.CategoriaNombre))
+                                {
+                                    <optgroup label="@grupo.Key">
+                                        @foreach (var factor in grupo)
+                                        {
+                                            <option value="@factor.Id">@factor.Nombre</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <input name="observacion" id="observacion" class="form-control form-control-sm rounded-3"
+                                   placeholder="Observación (opcional)" />
+                        </div>
+
+                        <button type="submit" id="btnAgregarFactor" class="btn btn-sm btn-success rounded-3 px-3">
+                            Agregar factor
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Evaluar riesgo</h6>
+
+                <form asp-action="EvaluarRiesgo" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small" for="puntajeRiesgo">Puntaje de riesgo</label>
+                        @* step=0.01, no 0.1: los umbrales del servicio son 0.30 / 0.60 / 0.80 y con
+                           un paso mas grueso el navegador rechaza valores como 0.85 por step mismatch. *@
+                        <input name="puntajeRiesgo" id="puntajeRiesgo" type="number" step="0.01" min="0" max="1"
+                               class="form-control form-control-sm rounded-3" value="0" required />
+                        <div class="form-text">Valor entre 0 y 1. Alto desde 0.60, crítico desde 0.80.</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <input name="mensaje" id="mensajeRiesgo" class="form-control form-control-sm rounded-3"
+                               placeholder="Contexto de la evaluación (opcional)" />
+                    </div>
+
+                    <button type="submit" id="btnEvaluarRiesgo" class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                        Evaluar riesgo
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body p-4">
                 <h6 class="fw-bold mb-3">Historial de severidad</h6>

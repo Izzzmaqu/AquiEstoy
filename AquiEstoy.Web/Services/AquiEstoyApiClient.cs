@@ -97,6 +97,47 @@ namespace AquiEstoy.Web.Services
             }
         }
 
+        /// <summary>
+        /// Cierra el caso via PATCH. Es el unico endpoint que asigna FechaCierre:
+        /// el PUT de EditarCasoAsync cambia el EstadoCasoId pero la deja nula.
+        /// </summary>
+        public async Task<ApiResult<CasoListItem>> CerrarCasoAsync(int id, CerrarCasoRequest request)
+        {
+            try
+            {
+                var respuesta = await _http.PatchAsJsonAsync($"api/casos/{id}/cerrar", request);
+
+                if (!respuesta.IsSuccessStatusCode)
+                    return ApiResult<CasoListItem>.Fail(await LeerMensajeDeErrorAsync(respuesta));
+
+                var datos = await respuesta.Content.ReadFromJsonAsync<CasoListItem>(JsonOptions);
+
+                return datos == null
+                    ? ApiResult<CasoListItem>.Fail("La API devolvió una respuesta vacía.")
+                    : ApiResult<CasoListItem>.Ok(datos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fallo al cerrar el caso {CasoId}", id);
+                return ApiResult<CasoListItem>.Fail("No se pudo contactar con el servicio.");
+            }
+        }
+
+        // ---------- Factores de riesgo ----------
+
+        public Task<IReadOnlyList<FactorRiesgoItem>> ListarFactoresRiesgoAsync() =>
+            GetListAsync<FactorRiesgoItem>("api/factores-riesgo");
+
+        public Task<ApiResult<CasoFactorRiesgoItem>> RegistrarFactorRiesgoAsync(
+            int casoId, RegistrarFactorRiesgoRequest request) =>
+            PostAsync<RegistrarFactorRiesgoRequest, CasoFactorRiesgoItem>(
+                $"api/casos/{casoId}/factores-riesgo", request);
+
+        // ---------- Alertas de riesgo ----------
+
+        public Task<ApiResult<EvaluarRiesgoResponse>> EvaluarRiesgoAsync(EvaluarRiesgoRequest request) =>
+            PostAsync<EvaluarRiesgoRequest, EvaluarRiesgoResponse>("api/alertas-riesgo/evaluar", request);
+
         // ---------- Conversaciones ----------
 
         public Task<IReadOnlyList<MensajeItem>> ListarMensajesAsync(int conversacionId) =>
@@ -188,6 +229,10 @@ namespace AquiEstoy.Web.Services
 
                 if (raiz.TryGetProperty("message", out var mensaje))
                     return mensaje.GetString() ?? cuerpo;
+
+                // AlertasRiesgoController devuelve la clave en español.
+                if (raiz.TryGetProperty("mensaje", out var mensajeEs))
+                    return mensajeEs.GetString() ?? cuerpo;
 
                 // ValidationProblemDetails: se aplanan los errores de todos los campos.
                 if (raiz.TryGetProperty("errors", out var errores))

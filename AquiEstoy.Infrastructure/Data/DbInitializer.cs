@@ -31,6 +31,8 @@ public static class DbInitializer
         await SeedProfesionalDemoAsync(context, passwordHasher);
         await SeedLineasAyudaAsync(context);
         await SeedTiposAlertaAsync(context);
+        await SeedCategoriasFactorAsync(context);
+        await SeedFactoresRiesgoAsync(context);
     }
 
     private static async Task SeedRolesAsync(AquiEstoyDbContext context)
@@ -67,6 +69,75 @@ public static class DbInitializer
         if (faltantes.Count == 0) return;
 
         context.NivelesSeveridad.AddRange(faltantes);
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>Categorías bajo las que se agrupan los factores de riesgo.</summary>
+    private static async Task SeedCategoriasFactorAsync(AquiEstoyDbContext context)
+    {
+        var deseadas = new[] { "Psicológico", "Social", "Familiar", "Conductual" };
+
+        var existentes = await context.CategoriasFactor.Select(c => c.Nombre).ToListAsync();
+
+        var faltantes = deseadas
+            .Where(nombre => !existentes.Contains(nombre))
+            .Select(nombre => new CategoriaFactor { Nombre = nombre })
+            .ToList();
+
+        if (faltantes.Count == 0) return;
+
+        context.CategoriasFactor.AddRange(faltantes);
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Catálogo mínimo de factores de riesgo. Los pesos siguen el criterio habitual en
+    /// prevención del suicidio: el intento previo es el predictor individual más fuerte,
+    /// por eso encabeza la escala. No pretende ser un instrumento clínico validado, sino
+    /// un catálogo representativo para operar y demostrar el módulo.
+    ///
+    /// La CategoriaId se resuelve leyendo la fila sembrada justo antes; ningún Id se asume.
+    /// </summary>
+    private static async Task SeedFactoresRiesgoAsync(AquiEstoyDbContext context)
+    {
+        var categorias = await context.CategoriasFactor
+            .ToDictionaryAsync(c => c.Nombre, c => c.Id);
+
+        var deseados = new[]
+        {
+            ("Psicológico", "Intentos previos de suicidio", "Antecedente de uno o más intentos. Principal predictor de riesgo.", 5.00m),
+            ("Psicológico", "Ideación suicida persistente", "Pensamientos recurrentes de muerte o autolesión.", 4.50m),
+            ("Psicológico", "Depresión diagnosticada", "Trastorno depresivo en curso, con o sin tratamiento.", 3.50m),
+
+            ("Social", "Aislamiento social", "Ausencia de red de apoyo o contacto cotidiano.", 3.00m),
+            ("Social", "Desempleo o precariedad económica", "Pérdida de empleo o dificultad económica sostenida.", 2.50m),
+
+            ("Familiar", "Pérdida de familiar reciente", "Duelo por fallecimiento cercano en los últimos meses.", 3.00m),
+            ("Familiar", "Antecedentes familiares de suicidio", "Historial de suicidio o intentos en la familia directa.", 3.50m),
+            ("Familiar", "Violencia intrafamiliar", "Exposición a maltrato físico, psicológico o sexual en el hogar.", 4.00m),
+
+            ("Conductual", "Consumo de sustancias", "Uso problemático de alcohol u otras drogas.", 3.50m),
+            ("Conductual", "Autolesiones no suicidas", "Conductas autolesivas sin intención suicida declarada.", 4.00m),
+            ("Conductual", "Aislamiento o cambios bruscos de conducta", "Retraimiento repentino, regalar pertenencias, despedidas.", 3.00m)
+        };
+
+        var existentes = await context.FactoresRiesgo.Select(f => f.Nombre).ToListAsync();
+
+        var faltantes = deseados
+            .Where(f => !existentes.Contains(f.Item2))
+            .Where(f => categorias.ContainsKey(f.Item1))
+            .Select(f => new FactorRiesgo
+            {
+                CategoriaId = categorias[f.Item1],
+                Nombre = f.Item2,
+                Descripcion = f.Item3,
+                PesoRiesgo = f.Item4
+            })
+            .ToList();
+
+        if (faltantes.Count == 0) return;
+
+        context.FactoresRiesgo.AddRange(faltantes);
         await context.SaveChangesAsync();
     }
 
