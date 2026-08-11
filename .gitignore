@@ -150,6 +150,10 @@ ipch/
 # Visual Studio Trace Files
 *.e2e
 
+# En Windows git compara sin distinguir mayusculas, asi que el patron *.e2e de arriba
+# tambien atrapaba al proyecto de pruebas AquiEstoy.Tests.E2E y lo dejaba fuera del repo.
+!AquiEstoy.Tests.E2E/
+
 # TFS 2012 Local Workspace
 $tf/
 
