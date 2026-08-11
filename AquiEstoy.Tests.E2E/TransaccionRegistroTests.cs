@@ -3,6 +3,7 @@ using AquiEstoy.Application.DTOs.FactoresRiesgo;
 using AquiEstoy.Application.DTOs.Usuarios;
 using AquiEstoy.Application.Interfaces;
 using AquiEstoy.Application.Services;
+using AquiEstoy.Infrastructure;
 using AquiEstoy.Infrastructure.Data;
 using AquiEstoy.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -47,7 +48,17 @@ public class TransaccionRegistroTests
             Telefono = "8888-9999"
         };
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await servicio.RegistrarAsync(dto));
+        var excepcion = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await servicio.RegistrarAsync(dto));
+
+        // La excepcion tiene que ser la simulada por CasoServiceQueFalla, no cualquier otra.
+        // Si llega la de SqlServerRetryingExecutionStrategy ("does not support user-initiated
+        // transactions"), la transaccion ni siquiera se abrio: no habria nada que revertir y
+        // las comprobaciones de abajo pasarian por el motivo equivocado, dejando pasar
+        // justo la regresion que esta prueba existe para detectar.
+        Assert.That(excepcion!.Message, Does.Contain("Fallo simulado"),
+            "Se esperaba el fallo simulado dentro de la transaccion, pero la excepcion fue otra: "
+            + excepcion.Message);
 
         // Contexto nuevo: se comprueba lo que realmente quedo persistido, no la cache.
         await using var verificacion = CrearDbContext();
@@ -92,10 +103,16 @@ public class TransaccionRegistroTests
         await context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Usa la misma configuracion que la aplicacion real (UseAquiEstoySqlServer, con
+    /// EnableRetryOnFailure incluido). Antes esta prueba llamaba a UseSqlServer a secas:
+    /// sin la estrategia de reintentos, una transaccion manual mal envuelta funcionaba
+    /// aqui y reventaba en produccion, que es justo la regresion que debe detectar.
+    /// </summary>
     private static AquiEstoyDbContext CrearDbContext()
     {
         var options = new DbContextOptionsBuilder<AquiEstoyDbContext>()
-            .UseSqlServer(TestConfig.ConnectionString)
+            .UseAquiEstoySqlServer(TestConfig.ConnectionString)
             .Options;
 
         return new AquiEstoyDbContext(options);

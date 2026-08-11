@@ -27,6 +27,17 @@ public interface IAquiEstoyDbContext
     /// <summary>
     /// Abre una transaccion explicita. Necesario para el registro de pacientes,
     /// que debe crear Usuario + Caso + Conversacion de forma atomica.
+    ///
+    /// Con EnableRetryOnFailure activo NO puede llamarse suelta: hay que ejecutarla
+    /// dentro del delegate de <see cref="CreateExecutionStrategy"/>.
     /// </summary>
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Estrategia de reintentos configurada en el proveedor. Envolver la transaccion
+    /// manual en su ExecuteAsync es obligatorio cuando hay EnableRetryOnFailure:
+    /// si no, SqlServerRetryingExecutionStrategy lanza InvalidOperationException
+    /// porque no puede reintentar una transaccion que inicio el usuario.
+    /// </summary>
+    IExecutionStrategy CreateExecutionStrategy();
 }

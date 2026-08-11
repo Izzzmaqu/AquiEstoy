@@ -10,16 +10,43 @@ namespace AquiEstoy.Infrastructure
 {
     public static class DependencyInjection
     {
+        /// <summary>
+        /// Configuracion de SQL Server del proyecto. Vive en un unico sitio a proposito:
+        /// las pruebas deben construir su DbContext con esta misma llamada. Un contexto
+        /// de prueba sin EnableRetryOnFailure no reproduce el comportamiento real y deja
+        /// pasar fallos que solo aparecen con la estrategia de reintentos activa
+        /// (por ejemplo, transacciones manuales fuera de un ExecutionStrategy).
+        /// </summary>
+        public static DbContextOptionsBuilder UseAquiEstoySqlServer(
+            this DbContextOptionsBuilder options,
+            string? connectionString)
+        {
+            return options.UseSqlServer(
+                connectionString,
+                sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorNumbersToAdd: null));
+        }
+
+        /// <summary>
+        /// Sobrecarga tipada, para quien construye las opciones con
+        /// DbContextOptionsBuilder&lt;TContext&gt; (las pruebas) y necesita conservar el tipo.
+        /// </summary>
+        public static DbContextOptionsBuilder<TContext> UseAquiEstoySqlServer<TContext>(
+            this DbContextOptionsBuilder<TContext> options,
+            string? connectionString)
+            where TContext : DbContext
+        {
+            UseAquiEstoySqlServer((DbContextOptionsBuilder)options, connectionString);
+            return options;
+        }
+
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Registra el DbContext para Entity Framework
             services.AddDbContext<AquiEstoyDbContext>(options =>
-                options.UseSqlServer(
-                    configuration.GetConnectionString("DefaultConnection"),
-                    sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorNumbersToAdd: null)));
+                options.UseAquiEstoySqlServer(configuration.GetConnectionString("DefaultConnection")));
 
             // Mapea la interfaz de la capa Application hacia la implementación concreta en Infrastructure
             services.AddScoped<IAquiEstoyDbContext>(provider => provider.GetRequiredService<AquiEstoyDbContext>());

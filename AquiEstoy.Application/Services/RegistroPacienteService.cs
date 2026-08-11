@@ -67,69 +67,80 @@ public class RegistroPacienteService : IRegistroPacienteService
 
         // --- Transaccion: las tres entidades se crean juntas o no se crea ninguna ---
 
-        await using var transaction = await _context.BeginTransactionAsync();
+        // La transaccion manual va dentro de la estrategia de reintentos: el DbContext
+        // esta configurado con EnableRetryOnFailure y SqlServerRetryingExecutionStrategy
+        // rechaza cualquier transaccion iniciada por el usuario que no pase por aqui.
+        // Si falla algo transitorio, ExecuteAsync reintenta el bloque entero.
+        var estrategia = _context.CreateExecutionStrategy();
 
-        try
+        return await estrategia.ExecuteAsync(async () =>
         {
-            var usuario = new Usuario
+            await using var transaction = await _context.BeginTransactionAsync();
+
+            try
             {
-                Identificacion = dto.Identificacion,
-                Nombre = dto.Nombre,
-                Apellidos = dto.Apellidos,
-                Email = dto.Email,
-                PasswordHash = _passwordHasher.Hash(dto.Password),
-                Telefono = dto.Telefono,
-                FechaNacimiento = dto.FechaNacimiento,
-                RolId = rolPaciente.Id,
-                ProvinciaId = dto.ProvinciaId,
-                CantonId = dto.CantonId,
-                Activo = true,
-                FechaRegistro = DateTime.UtcNow
-            };
+                // Las entidades se construyen aqui dentro a proposito: en un reintento
+                // el delegate se ejecuta de nuevo y debe partir de instancias limpias.
+                var usuario = new Usuario
+                {
+                    Identificacion = dto.Identificacion,
+                    Nombre = dto.Nombre,
+                    Apellidos = dto.Apellidos,
+                    Email = dto.Email,
+                    PasswordHash = _passwordHasher.Hash(dto.Password),
+                    Telefono = dto.Telefono,
+                    FechaNacimiento = dto.FechaNacimiento,
+                    RolId = rolPaciente.Id,
+                    ProvinciaId = dto.ProvinciaId,
+                    CantonId = dto.CantonId,
+                    Activo = true,
+                    FechaRegistro = DateTime.UtcNow
+                };
 
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+                _context.Usuarios.Add(usuario);
+                await _context.SaveChangesAsync();
 
-            // Se delega en CasoService en vez de duplicar sus validaciones de FK.
-            // Ambos servicios comparten la misma instancia scoped de DbContext, asi que
-            // el SaveChangesAsync interno de CasoService se enlista en esta transaccion.
-            var caso = await _casoService.CrearCasoAsync(new CrearCasoDto
+                // Se delega en CasoService en vez de duplicar sus validaciones de FK.
+                // Ambos servicios comparten la misma instancia scoped de DbContext, asi que
+                // el SaveChangesAsync interno de CasoService se enlista en esta transaccion.
+                var caso = await _casoService.CrearCasoAsync(new CrearCasoDto
+                {
+                    PacienteId = usuario.Id,
+                    ProfesionalId = profesional.Id,
+                    NivelSeveridadId = nivelSeveridad.Id,
+                    EstadoCasoId = estadoAbierto.Id,
+                    Descripcion = "Caso abierto automaticamente al registrar al paciente.",
+                    UsuarioActorId = usuario.Id
+                });
+
+                var conversacion = new Conversacion
+                {
+                    CasoId = caso.Id,
+                    PacienteId = usuario.Id,
+                    ProfesionalId = profesional.Id,
+                    FechaInicio = DateTime.UtcNow,
+                    Activa = true
+                };
+
+                _context.Conversaciones.Add(conversacion);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return new PacienteRegistradoDto
+                {
+                    UsuarioId = usuario.Id,
+                    CasoId = caso.Id,
+                    ConversacionId = conversacion.Id,
+                    NombreCompleto = $"{usuario.Nombre} {usuario.Apellidos}",
+                    Email = usuario.Email
+                };
+            }
+            catch
             {
-                PacienteId = usuario.Id,
-                ProfesionalId = profesional.Id,
-                NivelSeveridadId = nivelSeveridad.Id,
-                EstadoCasoId = estadoAbierto.Id,
-                Descripcion = "Caso abierto automaticamente al registrar al paciente.",
-                UsuarioActorId = usuario.Id
-            });
-
-            var conversacion = new Conversacion
-            {
-                CasoId = caso.Id,
-                PacienteId = usuario.Id,
-                ProfesionalId = profesional.Id,
-                FechaInicio = DateTime.UtcNow,
-                Activa = true
-            };
-
-            _context.Conversaciones.Add(conversacion);
-            await _context.SaveChangesAsync();
-
-            await transaction.CommitAsync();
-
-            return new PacienteRegistradoDto
-            {
-                UsuarioId = usuario.Id,
-                CasoId = caso.Id,
-                ConversacionId = conversacion.Id,
-                NombreCompleto = $"{usuario.Nombre} {usuario.Apellidos}",
-                Email = usuario.Email
-            };
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
     }
 }

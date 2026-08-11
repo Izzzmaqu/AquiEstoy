@@ -49,6 +49,11 @@ namespace AquiEstoy.Infrastructure.Data
             return Database.BeginTransactionAsync(cancellationToken);
         }
 
+        public IExecutionStrategy CreateExecutionStrategy()
+        {
+            return Database.CreateExecutionStrategy();
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
