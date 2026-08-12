@@ -46,7 +46,20 @@ namespace AquiEstoy.Web.Controllers
 
         // Chat del lado profesional. El identificador puede ser el del caso o el de
         // la conversacion; la API resuelve ambos.
-        [Authorize]
+        //
+        // Restringido por rol a proposito: con solo [Authorize], un paciente con
+        // sesion activa podia entrar aqui. Y como la cookie de autenticacion es
+        // unica por navegador (Web/Program.cs), si un profesional dejaba esta
+        // pantalla abierta en una pestana y despues alguien iniciaba sesion como
+        // paciente en otra pestana del MISMO navegador, recargar esta pestana
+        // heredaba en silencio la identidad del paciente: el usuarioId embebido
+        // en la vista pasaba a ser el del paciente sin que nadie volviera a
+        // iniciar sesion aqui, y el chat mostraba "Tu" en el mensaje ajeno.
+        // Restringir por rol no permite dos identidades simultaneas en el mismo
+        // navegador (eso es inherente a una sola cookie de sesion), pero convierte
+        // ese cruce silencioso en un rechazo explicito en vez de contenido con la
+        // identidad equivocada.
+        [Authorize(Roles = "Profesional,Admin")]
         public async Task<IActionResult> ChatSeguro(int conversacionId)
         {
             var usuarioId = User.UsuarioId();
