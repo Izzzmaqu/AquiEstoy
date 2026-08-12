@@ -113,17 +113,7 @@
             </div>
         </article>
 
-        <article class="contenedor-grafico">
-            <div class="titulo-grafico">
-                <div>
-                    <h3>Casos por provincia</h3>
-                    <p>Distribución geográfica de los registros</p>
-                </div>
-            </div>
 
-            <div class="canvas-wrapper canvas-alto">
-                <canvas id="graficoProvincias"></canvas>
-            </div>
         </article>
 
         <article class="contenedor-grafico">
@@ -159,7 +149,6 @@
     window.datosPanelEstadistico = {
         casosPorMes: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorMes)),
         casosPorSeveridad: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorSeveridad)),
-        casosPorProvincia: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorProvincia)),
         factoresRiesgo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.FactoresRiesgoFrecuentes)),
         casosPorEstado: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CasosPorEstado))
     };
